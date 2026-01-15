@@ -1,0 +1,206 @@
+﻿<Window x:Class="Handler.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Process Handle and Paged Pool Monitor" 
+        Height="580" Width="980"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <!-- Style for right-aligned text in DataGrid -->
+        <Style x:Key="RightAlignText" TargetType="TextBlock">
+            <Setter Property="TextAlignment" Value="Right"/>
+            <Setter Property="Padding" Value="0,0,6,0"/>
+        </Style>
+
+        <!-- Dark blue button with rounded corners and white bold text -->
+        <Style x:Key="DarkBlueButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#2C3E50"/>
+            <!-- Dark blue -->
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                BorderThickness="0">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+
+            <!-- Hover effect -->
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#34495E"/>
+                    <!-- Lighter dark blue on hover -->
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#1C2833"/>
+                    <!-- Even darker when pressed -->
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Window.Background>
+        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+            <GradientStop Color="#FF3DFAFA"/>
+            <GradientStop Color="White" Offset="1"/>
+        </LinearGradientBrush>
+    </Window.Background>
+
+    <Grid Margin="12">
+        <Grid.Background>
+            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                <GradientStop Color="#FF21F0FE"/>
+                <GradientStop Color="White" Offset="1"/>
+            </LinearGradientBrush>
+        </Grid.Background>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Controls -->
+            <RowDefinition Height="Auto"/>
+            <!-- Status -->
+            <RowDefinition Height="*"/>
+            <!-- Main DataGrid + summary overlay -->
+            <RowDefinition Height="Auto"/>
+            <!-- Footer note -->
+        </Grid.RowDefinitions>
+
+        <!-- Controls -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="Process name prefix:" 
+                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBox x:Name="txtProcessName" Width="220" Margin="0,0,12,0"/>
+
+            <!-- Styled button -->
+            <Button x:Name="btnRefresh" 
+                    Content="Refresh Now" 
+                    Width="110" 
+                    Margin="0,0,12,0" 
+                    Style="{StaticResource DarkBlueButtonStyle}"
+                    Click="btnRefresh_Click" Background="#FF72A6D9"/>
+
+            <CheckBox x:Name="chkAutoRefresh" Content="Auto-refresh every" 
+                      VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <ComboBox x:Name="cmbInterval" Width="80" SelectedIndex="2">
+                <ComboBoxItem>3</ComboBoxItem>
+                <ComboBoxItem>5</ComboBoxItem>
+                <ComboBoxItem>10</ComboBoxItem>
+                <ComboBoxItem>30</ComboBoxItem>
+            </ComboBox>
+            <TextBlock Text="seconds" VerticalAlignment="Center" Margin="8,0,0,0"/>
+        </StackPanel>
+
+        <TextBlock Grid.Row="1" x:Name="txtStatus" Margin="0,0,0,8" Foreground="#555"/>
+
+        <!-- Main content area: DataGrid + summary overlay at bottom -->
+        <Grid Grid.Row="2">
+            <!-- Main DataGrid for process list -->
+            <DataGrid x:Name="dgProcesses" 
+                      AutoGenerateColumns="False" 
+                      IsReadOnly="True"
+                      GridLinesVisibility="Horizontal" 
+                      AlternatingRowBackground="#f8f8f8"
+                      VerticalScrollBarVisibility="Auto">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70"/>
+                    <DataGridTextColumn Header="Process Name" Binding="{Binding ProcessName}" Width="180"/>
+                    <DataGridTextColumn Header="Handle Count" Binding="{Binding HandleCount}" Width="100" ElementStyle="{StaticResource RightAlignText}"/>
+                    <DataGridTextColumn Header="Paged Pool (KB)" Binding="{Binding PagedPoolKB, StringFormat=N0}" Width="120" ElementStyle="{StaticResource RightAlignText}"/>
+                    <DataGridTextColumn Header="Paged Pool Peak (KB)" Binding="{Binding PagedPoolPeakKB, StringFormat=N0}" Width="140" ElementStyle="{StaticResource RightAlignText}"/>
+                    <DataGridTextColumn Header="Threads" Binding="{Binding ThreadCount}" Width="80" ElementStyle="{StaticResource RightAlignText}"/>
+                    <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime, StringFormat=yyyy-MM-dd HH:mm}" Width="140"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- Summary overlay - pinned to bottom -->
+            <Grid VerticalAlignment="Bottom" Height="120" Background="#e8e8e8" Margin="0,0,0,8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="40"/>
+                    <RowDefinition Height="20"/>
+                </Grid.RowDefinitions>
+
+                <!-- Filtered totals -->
+                <Grid Grid.Row="0" Margin="0,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="70"/>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="1" Text="TOTALS (filtered)" FontWeight="Bold" VerticalAlignment="Center" Margin="6,0"/>
+                    <TextBlock Grid.Column="2" x:Name="txtTotalHandles"   Text="—" HorizontalAlignment="Right" Margin="0,0,6,0" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="3" x:Name="txtTotalPaged"     Text="—" HorizontalAlignment="Right" Margin="0,0,6,0" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="4" x:Name="txtTotalPagedPeak" Text="—" HorizontalAlignment="Right" Margin="0,0,6,0" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="5" x:Name="txtTotalThreads"   Text="—" HorizontalAlignment="Right" Margin="0,0,6,0" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="6" x:Name="txtTotalUserHandles"   Text="—" HorizontalAlignment="Right" Margin="0,0,6,0" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="7" x:Name="txtUserRemaining"      Text="—" HorizontalAlignment="Right" Margin="0,0,6,0" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="8" x:Name="txtTotalGdiHandles"    Text="—" HorizontalAlignment="Right" Margin="0,0,6,0" FontWeight="Bold"/>
+                </Grid>
+
+                <!-- System-wide GUI resources -->
+                <Grid Grid.Row="1" Margin="0,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="250"/>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="System-wide GUI Resources:" FontWeight="Bold" VerticalAlignment="Center" Margin="6,0"/>
+                    <TextBlock Grid.Column="1" x:Name="txtSystemUserHandles" Text="—" HorizontalAlignment="Right" Margin="0,0,6,0" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="2" x:Name="txtSystemGdiHandles"  Text="—" HorizontalAlignment="Right" Margin="0,0,6,0" FontWeight="Bold"/>
+                </Grid>
+
+                <!-- USER Handles Usage Meter -->
+                <Grid Grid.Row="2" Margin="6,4,6,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="USER Handles Usage:" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,12,0"/>
+
+                    <ProgressBar x:Name="pbUserHandles" Grid.Column="1" Height="18" 
+                                 Minimum="0" Maximum="100" Value="0" 
+                                 Foreground="#4CAF50" Background="#E0E0E0"/>
+
+                    <TextBlock x:Name="txtUserPercent" Grid.Column="2" 
+                               Margin="12,0,0,0" VerticalAlignment="Center" 
+                               FontWeight="Bold" Text="0%"/>
+                </Grid>
+
+                <!-- Server total RAM -->
+                <Grid Grid.Row="3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="250"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Server Total Physical RAM:" FontWeight="Bold" VerticalAlignment="Center" Margin="6,0"/>
+                    <TextBlock Grid.Column="1" x:Name="txtServerTotalRAM" Text="Calculating..." HorizontalAlignment="Right" Margin="0,0,12,0" FontWeight="Bold"/>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- Footer note -->
+        <TextBlock Grid.Row="3" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#666" FontSize="11">
+            Note: Run as Administrator for best results (handles, GUI resources, system processes). 
+            USER remaining is estimated (practical max ~32k windows/objects).
+        </TextBlock>
+    </Grid>
+</Window>
