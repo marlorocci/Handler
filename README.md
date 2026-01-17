@@ -2,7 +2,7 @@ Handler is a beta version program for checking the number of system handles, pag
 
 USE:
 
-For use with Milestone products, in the Process Name Prefix box, type VIDEOOS, then hit Refresh.  he program will then scan the running processes for all Milestone processes and make an analysis.
+For use with Milestone products, in the Process Name Prefix box, type VIDEOOS, then hit Refresh.  The program will then scan the running processes for all Milestone processes and make an analysis.
 
 This is a beta program.  No warranties are expressed or implied.
 
